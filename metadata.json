@@ -1,0 +1,8 @@
+{
+  "name": "Lumina: The Digital Sanctuary",
+  "description": "A sophisticated aesthetic planner and vision board for girls, featuring an outfit registry, smart calendar, and AI-powered vision board generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
