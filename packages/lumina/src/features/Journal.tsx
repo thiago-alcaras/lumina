@@ -1,61 +1,172 @@
-
-import React from 'react';
-import { Typography, Card, Button } from '../components/DesignSystem';
-import { Language } from '../locales';
-
-interface JournalProps {
-  t: any;
-  lang: Language;
-}
-
-// Fixed: Added JournalProps and accepted t/lang to match what is passed from App.tsx
-const Journal: React.FC<JournalProps> = ({ t, lang }) => {
+import { useState } from "react";
+import {
+  Button,
+  Card,
+  Typography,
+  Field,
+  Empty,
+  moodIcons,
+  type FeatureProps,
+} from "../components/Shared";
+import { localDate, formatDate } from "../services/dateService";
+import type { JournalEntry, Mood } from "../types";
+export default function Journal({ data, setData, t, lang }: FeatureProps) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [content, setContent] = useState("");
+  const [date, setDate] = useState(localDate());
+  const [period, setPeriod] = useState<"morning" | "evening">("morning");
+  const [mood, setMood] = useState<Mood>("calm");
+  const reset = () => {
+    setEditing(null);
+    setContent("");
+    setDate(localDate());
+  };
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
-      <div className="text-center space-y-4">
-        <Typography variant="h1" className="italic">{t.journal.title}</Typography>
-        <Typography variant="body">{t.journal.subtitle}</Typography>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div>
+        <Typography variant="h2">{t.journal.title}</Typography>
+        <Typography>{t.journal.subtitle}</Typography>
       </div>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        <Card className="flex flex-col gap-6 !p-8">
-          <Typography variant="h3">{t.journal.morning_title}</Typography>
-          <textarea 
-            className="flex-1 min-h-[150px] bg-transparent border-none focus:ring-0 resize-none font-serif text-lg leading-relaxed placeholder:opacity-30"
-            placeholder={t.journal.morning_placeholder}
-          />
-          <Button variant="secondary" size="sm" className="self-end">{t.journal.save}</Button>
-        </Card>
-
-        <Card className="flex flex-col gap-6 !p-8 bg-lumina-900 text-white">
-          <Typography variant="h3" className="text-white">{t.journal.evening_title}</Typography>
-          <textarea 
-            className="flex-1 min-h-[150px] bg-transparent border-none focus:ring-0 resize-none font-serif text-lg leading-relaxed text-white/90 placeholder:text-white/20"
-            placeholder={t.journal.evening_placeholder}
-          />
-          <Button variant="secondary" size="sm" className="self-end !bg-white !text-lumina-900">{t.journal.save}</Button>
-        </Card>
-      </div>
-
-      <section className="space-y-6">
-        <Typography variant="h2">{t.journal.previous}</Typography>
-        <div className="grid gap-4">
-          {[1,2,3].map(i => (
-            <Card key={i} className="flex justify-between items-center group cursor-pointer hover:bg-lumina-50 transition-colors">
-              <div>
-                <Typography variant="small" className="uppercase tracking-widest text-[10px]">MAY 10, 2024</Typography>
-                <Typography variant="h3">The Sunday Morning Glow</Typography>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-2xl">✨</span>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">Read</Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+      <Card>
+        <form
+          className="space-y-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!content.trim()) return;
+            const entry: JournalEntry = {
+              id: editing ?? crypto.randomUUID(),
+              content: content.trim(),
+              date,
+              mood,
+              period,
+            };
+            setData((d) => ({
+              ...d,
+              journal: editing
+                ? d.journal.map((v) => (v.id === editing ? entry : v))
+                : [entry, ...d.journal],
+            }));
+            reset();
+          }}
+        >
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Field label={t.ui.date}>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </Field>
+            <Field label={t.ui.category}>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as typeof period)}
+              >
+                <option value="morning">{t.journal.morning_title}</option>
+                <option value="evening">{t.journal.evening_title}</option>
+              </select>
+            </Field>
+            <Field label={t.ui.mood}>
+              <select
+                value={mood}
+                onChange={(e) => setMood(e.target.value as Mood)}
+              >
+                {Object.entries(t.ui.moods).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {moodIcons[k as Mood]} {v}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field
+            label={
+              period === "morning"
+                ? t.journal.morning_title
+                : t.journal.evening_title
+            }
+          >
+            <textarea
+              required
+              maxLength={20000}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={
+                period === "morning"
+                  ? t.journal.morning_placeholder
+                  : t.journal.evening_placeholder
+              }
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit">{t.ui.save}</Button>
+            {editing && (
+              <Button type="button" variant="ghost" onClick={reset}>
+                {t.ui.cancel}
+              </Button>
+            )}
+          </div>
+        </form>
+      </Card>
+      <section className="space-y-4">
+        <Typography variant="h3">{t.journal.previous}</Typography>
+        {data.journal.length ? (
+          [...data.journal]
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .map((entry) => (
+              <Card key={entry.id}>
+                <div className="flex justify-between">
+                  <Typography variant="small">
+                    {formatDate(entry.date, lang)} ·{" "}
+                    {entry.period === "evening"
+                      ? t.journal.evening_title
+                      : t.journal.morning_title}
+                  </Typography>
+                  <span title={t.ui.moods[entry.mood]}>
+                    {moodIcons[entry.mood]}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap break-words my-4">
+                  {entry.content}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditing(entry.id);
+                      setContent(entry.content);
+                      setDate(entry.date);
+                      setMood(entry.mood);
+                      setPeriod(entry.period ?? "morning");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    {t.ui.edit}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm(t.ui.confirm_delete)) {
+                        setData((d) => ({
+                          ...d,
+                          journal: d.journal.filter((v) => v.id !== entry.id),
+                        }));
+                        if (editing === entry.id) reset();
+                      }
+                    }}
+                  >
+                    {t.ui.delete}
+                  </Button>
+                </div>
+              </Card>
+            ))
+        ) : (
+          <Empty text={t.ui.journal_empty} />
+        )}
       </section>
     </div>
   );
-};
-
-export default Journal;
+}

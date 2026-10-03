@@ -1,274 +1,124 @@
+# Lumina — seu espaço para florescer
 
-# Lumina: The Digital Sanctuary + Aurora Design System
+Lumina é um planejador pessoal: reúne compromissos, looks, objetivos visuais,
+humor e reflexões em um espaço tranquilo. Aurora é seu design system React.
 
-> Monorepo completo com aplicação web e design system independente
+## Executar
 
-## 🏗️ Estrutura do Monorepo
+Requisitos: **Node.js 22.12+** e npm. Use uma versão LTS atual do Node.
 
-Este projeto usa npm workspaces para gerenciar múltiplos pacotes:
+```bash
+npm ci
+npm run dev
+```
+
+Abra http://localhost:3000. O comando inicia a aplicação Vite na porta 3000 e
+sua API local na porta 3001. Ambos são encerrados ao interromper o comando.
+
+Para executar o build de produção:
+
+```bash
+npm run build
+npm start
+```
+
+`npm start` serve a aplicação e a API em http://localhost:3000. O servidor se
+vincula apenas à interface local. Esta versão é um aplicativo pessoal local;
+exposição pública exige autenticação, limites por usuário e armazenamento no servidor.
+
+## O que funciona
+
+- **Painel:** próximos compromissos, objetivos recentes, registro diário de humor,
+  atalhos e sugestões locais de autocuidado.
+- **Calendário:** meses e dias reais, navegação, criação, edição e exclusão de
+  compromissos por data e categoria.
+- **Estilo:** criação e edição de looks com nome, categoria e imagem; filtros e exclusão.
+- **Visão:** objetivos com imagens enviadas pelo usuário ou geradas pelo Gemini;
+  edição e exclusão.
+- **Diário:** reflexões de manhã ou noite, data, humor, histórico, edição e exclusão.
+- **Busca:** pesquisa títulos, looks, objetivos e conteúdo do diário.
+- **Português e inglês:** escolha de idioma preservada entre sessões.
+- **Backup:** exportação JSON e restauração validada, com confirmação de substituição.
+
+Os uploads aceitam PNG, JPEG e WebP de até 10 MB. Imagens enviadas são reduzidas a
+até 1200 pixels e comprimidas em JPEG para economizar o armazenamento local.
+
+## Dados pessoais
+
+Os dados ficam no `localStorage` deste navegador, neste endereço. Outro navegador,
+outro endereço ou limpeza dos dados do navegador não compartilha essas informações.
+Faça backups regularmente. Ainda não há conta, sincronização ou banco remoto.
+
+A primeira abertura migra os dados antigos `lumina_outfits`, `lumina_vision` e
+`lumina_events`, preservando as chaves originais. A aplicação não grava antes de
+concluir a leitura. Se houver dados corrompidos, bloqueia alterações e permite
+exportar os originais ou restaurar um backup. Se o armazenamento ficar cheio,
+informa a falha e permite exportar os dados que estão na memória.
+
+## IA opcional
+
+A aplicação funciona sem IA. Para habilitá-la, copie `.env.example` para `.env`
+na raiz, defina `GEMINI_API_KEY` e reinicie o servidor:
+
+```dotenv
+GEMINI_API_KEY=sua_chave
+GEMINI_TEXT_MODEL=gemini-2.5-flash
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+```
+
+A chave fica exclusivamente no servidor; não use o prefixo `VITE_`.
+As sugestões enviam os compromissos de hoje ao Gemini, e a geração de imagens
+envia a descrição digitada. Diário e looks não são enviados automaticamente.
+A disponibilidade depende da chave, modelos e quota da conta Google.
+Modelos podem ser alterados nas variáveis acima.
+
+Referências da integração: [API Gemini](https://ai.google.dev/api) e
+[geração de imagens](https://ai.google.dev/gemini-api/docs/generate-content/image-generation).
+
+## Desenvolvimento e validação
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+npm run dev:aurora
+npm run build:storybook
+```
+
+Os testes unitários verificam persistência, migração, backup inválido, quota,
+calendário e rotas de IA com um provedor simulado. Os testes de navegador cobrem
+criação, edição, exclusão, uploads, busca, idioma, restauração e recarga em desktop
+e mobile. Por padrão usam o Microsoft Edge instalado. Para usar o Chromium do
+Playwright, remova `channel: 'msedge'` da configuração e execute
+`npx playwright install chromium`.
+
+## Estrutura
 
 ```text
-/
-├── packages/
-│   ├── lumina/          # Aplicação web (Vite + React)
-│   │   ├── src/
-│   │   │   ├── features/        # Dashboard, Journal, VisionBoard, etc.
-│   │   │   ├── services/        # geminiService, persistenceService
-│   │   │   ├── App.tsx
-│   │   │   └── main.tsx
-│   │   ├── index.html
-│   │   ├── package.json
-│   │   └── vite.config.ts
-│   │
-│   └── aurora/          # Design System (componentes React + Storybook)
-│       ├── src/
-│       │   ├── tokens/          # Colors, typography, spacing
-│       │   ├── components/      # Button, Card, Typography, etc.
-│       │   └── index.ts
-│       ├── docs/                # Documentação .md para IA
-│       │   ├── README.md
-│       │   ├── COMPONENT_SPEC.md
-│       │   ├── TOKENS.md
-│       │   ├── USAGE.md
-│       │   └── CONTRIBUTING.md
-│       ├── .storybook/          # Configuração do Storybook
-│       ├── package.json
-│       └── vite.config.ts
-│
-├── package.json         # Root com workspaces
-└── README.md            # Este arquivo
+packages/lumina/src/   # Aplicação React + TypeScript
+packages/aurora/src/   # Componentes e tokens compartilhados
+server/index.mjs      # API Gemini e servidor do build
+scripts/dev.mjs       # Inicialização de desenvolvimento
+ tests/               # Testes unitários e de navegador
 ```
 
-## 🚀 Quick Start
-
-### Instalar Dependências
-
-```bash
-npm install
-```
-
-### Rodar Lumina (Aplicação Web)
-
-```bash
-npm run dev:lumina
-# Acesse: http://localhost:3000
-```
-
-### Rodar Aurora (Storybook)
-
-```bash
-npm run dev:aurora
-# Acesse: http://localhost:6006
-```
-
-### Rodar Ambos
-
-```bash
-# Terminal 1
-npm run dev:lumina
-
-# Terminal 2
-npm run dev:aurora
-```
-
-## 📦 Pacotes
-
-### Lumina (Web App)
-
-Aplicação de planejamento pessoal com IA para organização e manifestação.
-
-**Features:**
-- 📊 Dashboard com insights AI (Gemini)
-- 📅 CalendarView (mensal/semanal)
-- 👗 Style Registry (lookbook visual)
-- 🎨 Vision Board (geração de imagens AI)
-- ✍️ Daily Glow Journal (reflexões)
-
-**Tech Stack:**
-- React 19
-- TypeScript 5.8
-- Vite 6
-- Tailwind CSS (CDN)
-- Gemini API
-- LocalStorage persistence
-
-### Aurora (Design System)
-
-Sistema de design componentizado e independente.
-
-**Componentes:**
-- Button (4 variantes, 3 tamanhos, loading state)
-- Card (padding configurável, hover)
-- Typography (h1, h2, h3, body, small)
-
-**Features:**
-- 🎨 Design tokens centralizados
-- 📚 Storybook completo
-- 📖 Documentação .md para IA
-- 🔧 TypeScript type-safe
-- 📦 Distribuível como biblioteca
-
-**Tech Stack:**
-- React 19
-- TypeScript 5.8
-- Vite 6 (library mode)
-- Storybook 8.5
-- Tailwind CSS
-
-## 🎨 Design System: Aurora
-
-### Colors
-
-```typescript
-// Primary Palette
-colors.primary[900] // #43302b - Café/Espresso
-colors.primary[50]  // #fdf8f6 - Cream
-
-// Accent Colors
-colors.accent.rose  // #f4dada - Blush
-colors.accent.sage  // #e2e8e4 - Sage
-colors.accent.gold  // #d4af37 - Gold
-```
-
-### Typography
-
-```typescript
-typography.fonts.serif  // "Playfair Display" - Headings
-typography.fonts.sans   // "Plus Jakarta Sans" - UI
-```
-
-## 🛠 Scripts Disponíveis
-
-### Desenvolvimento
-
-```bash
-npm run dev:lumina    # Roda aplicação Lumina
-npm run dev:aurora    # Roda Storybook do Aurora
-```
-
-### Build
-
-```bash
-npm run build:lumina  # Build da aplicação
-npm run build:aurora  # Build da biblioteca Aurora
-```
-
-### Storybook
-
-```bash
-npm run storybook     # Inicia Storybook
-npm run build-storybook  # Build estático do Storybook
-```
-
-## 📚 Documentação
-
-### Aurora Design System
-
-- [README](./packages/aurora/README.md) - Visão geral e quick start
-- [Component Spec](./packages/aurora/docs/COMPONENT_SPEC.md) - Criar componentes
-- [Design Tokens](./packages/aurora/docs/TOKENS.md) - Cores, tipografia, espaçamento
-- [Usage Guide](./packages/aurora/docs/USAGE.md) - Como usar os componentes
-- [Contributing](./packages/aurora/docs/CONTRIBUTING.md) - Guia de contribuição
-
-### Lumina App
-
-- Features modulares em `packages/lumina/src/features/`
-- Services em `packages/lumina/src/services/`
-- Tipos em `packages/lumina/src/types.ts`
-
-## 🔧 Setup de Desenvolvimento
-
-### Pré-requisitos
-
-- Node.js 18+ (recomendado: 20+)
-- npm 9+
-
-### Variáveis de Ambiente
-
-Crie `.env` na raiz:
-
-```bash
-GEMINI_API_KEY=sua_chave_aqui
-```
-
-### Estrutura de Desenvolvimento
-
-1. **Desenvolver componentes no Aurora:**
-   ```bash
-   cd packages/aurora
-   npm run storybook
-   ```
-
-2. **Usar componentes no Lumina:**
-   ```tsx
-   import { Button, Card } from '@lumina/aurora';
-   ```
-
-3. **Hot reload automático:**
-   - Mudanças no Aurora refletem automaticamente no Lumina
-   - Workspaces permitem desenvolvimento integrado
-
-## 🎯 Workflow de Desenvolvimento
-
-### Adicionar Componente no Aurora
-
-1. Criar `packages/aurora/src/components/NovoComponente.tsx`
-2. Criar `packages/aurora/src/components/NovoComponente.stories.tsx`
-3. Exportar em `packages/aurora/src/index.ts`
-4. Testar no Storybook
-5. Usar no Lumina
-
-### Adicionar Feature no Lumina
-
-1. Criar `packages/lumina/src/features/NovaFeature.tsx`
-2. Importar componentes do Aurora
-3. Adicionar rota/lógica no `App.tsx`
-4. Testar no navegador
-
-## 📋 Boas Práticas
-
-### Commits
-
-Use conventional commits:
-```
-feat: adiciona componente Badge
-fix: corrige hover do Button
-docs: atualiza README do Aurora
-```
-
-### Imports
-
-```tsx
-// ✅ Bom - Aurora
-import { Button, Card } from '@lumina/aurora';
-
-// ✅ Bom - Lumina
-import { Dashboard } from './features/Dashboard';
-```
-
-## 🐛 Troubleshooting
-
-### Problema: Aurora não encontrado
-
-```bash
-npm install
-```
-
-### Problema: Port em uso
-
-```bash
-# Lumina usa porta 3000
-# Storybook usa porta 6006
-# Verifique se estão livres
-```
-
-### Problema: TypeScript errors
-
-```bash
-cd packages/aurora
-npm run build
-```
-
-## 📄 Licença
-
-Projeto Lumina - Design System Aurora
+Os arquivos antigos da raiz reexportam a implementação de `packages/lumina`.
+Os estilos Tailwind são compilados localmente, incluindo os componentes Aurora;
+não há dependência do CDN para renderizar a interface.
+
+## Continuação do projeto
+
+O projeto estava na migração para npm workspaces, com componentes ausentes,
+interfaces demonstrativas e persistência incompleta. A continuação conclui o MVP
+local. Próximos passos: autenticação e banco de dados, integração autorizada com
+Google Calendar, análise de humor e compartilhamento de quadros com controle de acesso.
+
+## Dependências e avisos conhecidos
+
+Foram aplicadas atualizações compatíveis e versões corrigidas de lodash e uuid.
+A auditoria ainda aponta a cadeia `braces → chokidar/micromatch → Tailwind 3`
+(cinco alertas de desenvolvimento). A versão publicada de braces ainda está no
+intervalo vulnerável. A resolução sugerida exige migrar para Tailwind 4, que fica
+como manutenção pendente do design system. Esses pacotes não entram no bundle
+React servido em produção. Consulte `npm audit` para a situação atual.

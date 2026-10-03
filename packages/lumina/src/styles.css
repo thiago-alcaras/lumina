@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  body {
+    @apply bg-lumina-50 text-lumina-900 font-sans antialiased;
+  }
+  input:not([type="file"]),
+  textarea,
+  select {
+    @apply w-full rounded-xl border border-lumina-200 bg-lumina-50 px-4 py-3 text-lumina-900;
+  }
+  textarea {
+    @apply min-h-36 resize-y;
+  }
+  label {
+    @apply block text-sm font-medium text-lumina-800;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline outline-2 outline-offset-4 outline-lumina-700;
+  }
+  button {
+    touch-action: manipulation;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

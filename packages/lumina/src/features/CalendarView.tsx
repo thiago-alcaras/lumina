@@ -1,79 +1,228 @@
-
-import React from 'react';
-import { Typography, Card, Button } from '../components/DesignSystem';
-import { Event } from '../types';
-import { Language } from '../locales';
-
-interface CalendarProps {
-  events: Event[];
-  setEvents: React.Dispatch<React.SetStateAction<Event[]>>;
-  t: any;
-  lang: Language;
-}
-
-// Fixed: Added t and lang to props to match what is passed from App.tsx
-const CalendarView: React.FC<CalendarProps> = ({ events, setEvents, t, lang }) => {
-  const daysInMonth = 31;
-  const currentMonth = lang === 'pt' ? "Maio 2024" : "May 2024";
-
+import { useState } from "react";
+import {
+  Button,
+  Card,
+  Typography,
+  Field,
+  Empty,
+  type FeatureProps,
+} from "../components/Shared";
+import { localDate, monthGrid, formatDate } from "../services/dateService";
+import type { Event } from "../types";
+export default function CalendarView({
+  data,
+  setData,
+  t,
+  lang,
+  initialDate = localDate(),
+}: FeatureProps & { initialDate?: string }) {
+  const [month, setMonth] = useState(() => {
+    const date = new Date(`${initialDate}T12:00:00`);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
+  const [selected, setSelected] = useState(initialDate);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<Event["type"]>("appointment");
+  const changeMonth = (delta: number) =>
+    setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
+  const edit = (event: Event) => {
+    setEditing(event.id);
+    setTitle(event.title);
+    setType(event.type);
+    setSelected(event.date);
+  };
+  const reset = () => {
+    setEditing(null);
+    setTitle("");
+    setType("appointment");
+  };
+  const dayEvents = data.events.filter((e) => e.date === selected);
+  const locale = lang === "pt" ? "pt-BR" : "en-US";
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <Typography variant="h2">{currentMonth}</Typography>
-          <Typography variant="body">{lang === 'pt' ? 'Seu ritmo para este mês.' : 'Your rhythm for this month.'}</Typography>
+          <Typography variant="h2">
+            {month.toLocaleDateString(locale, {
+              month: "long",
+              year: "numeric",
+            })}
+          </Typography>
+          <Typography>{t.ui.calendar_subtitle}</Typography>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">{lang === 'pt' ? 'Anterior' : 'Previous'}</Button>
-          <Button variant="outline" size="sm">{lang === 'pt' ? 'Próximo' : 'Next'}</Button>
+          <Button size="sm" variant="outline" onClick={() => changeMonth(-1)}>
+            {t.ui.previous}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setMonth(
+                new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+              );
+              setSelected(localDate());
+            }}
+          >
+            {t.ui.today}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => changeMonth(1)}>
+            {t.ui.next}
+          </Button>
         </div>
       </div>
-
-      <div className="grid grid-cols-7 gap-4">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-          <div key={day} className="text-center py-2">
-            <Typography variant="small" className="uppercase tracking-widest font-bold !text-[10px]">{day}</Typography>
-          </div>
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const dayNum = i + 1;
-          const hasEvent = events.some(e => e.date.includes(`-${dayNum.toString().padStart(2, '0')}`));
-          
-          return (
-            <Card key={i} className={`aspect-square !p-3 flex flex-col justify-between hover:border-lumina-400 cursor-pointer transition-colors
-              ${dayNum === 15 ? 'bg-accent-rose/30 border-accent-rose' : ''}`}>
-              <Typography variant="small" className="font-bold opacity-40">{dayNum}</Typography>
-              {hasEvent && (
-                <div className="w-1.5 h-1.5 rounded-full bg-lumina-900 mx-auto" />
+      <Card padding="sm">
+        <div className="grid grid-cols-7 gap-1 sm:gap-3">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className="text-center text-xs py-2">
+              {new Date(2024, 0, 7 + i).toLocaleDateString(locale, {
+                weekday: "short",
+              })}
+            </div>
+          ))}
+          {monthGrid(month.getFullYear(), month.getMonth()).map((date, i) =>
+            date ? (
+              <button
+                key={date}
+                aria-label={formatDate(date, lang)}
+                aria-pressed={selected === date}
+                onClick={() => {
+                  setSelected(date);
+                  reset();
+                }}
+                className={`min-h-14 sm:min-h-24 rounded-xl border p-1 sm:p-3 text-left ${selected === date ? "bg-accent-rose border-lumina-400" : "border-lumina-100 hover:bg-lumina-50"} ${date === localDate() ? "font-bold" : ""}`}
+              >
+                <span>{Number(date.slice(-2))}</span>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  {data.events
+                    .filter((e) => e.date === date)
+                    .slice(0, 3)
+                    .map((e) => (
+                      <span
+                        key={e.id}
+                        title={e.title}
+                        className="w-1.5 h-1.5 rounded-full bg-lumina-900"
+                      />
+                    ))}
+                </div>
+              </button>
+            ) : (
+              <div key={`blank-${i}`} />
+            ),
+          )}
+        </div>
+      </Card>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <section className="space-y-4">
+          <Typography variant="h3">{formatDate(selected, lang)}</Typography>
+          {dayEvents.length ? (
+            dayEvents.map((event) => (
+              <Card key={event.id}>
+                <Typography variant="h3">{event.title}</Typography>
+                <Typography variant="small">
+                  {t.ui.event_types[event.type]}
+                </Typography>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => edit(event)}
+                  >
+                    {t.ui.edit}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm(t.ui.confirm_delete)) {
+                        setData((d) => ({
+                          ...d,
+                          events: d.events.filter((e) => e.id !== event.id),
+                        }));
+                        if (editing === event.id) reset();
+                      }
+                    }}
+                  >
+                    {t.ui.delete}
+                  </Button>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <Empty text={t.ui.no_events} />
+          )}
+        </section>
+        <Card>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!title.trim()) return;
+              const event: Event = {
+                id: editing ?? crypto.randomUUID(),
+                title: title.trim(),
+                date: selected,
+                type,
+              };
+              setData((d) => ({
+                ...d,
+                events: editing
+                  ? d.events.map((v) => (v.id === editing ? event : v))
+                  : [...d.events, event],
+              }));
+              reset();
+            }}
+          >
+            <Typography variant="h3">
+              {editing ? t.ui.edit : t.ui.event}
+            </Typography>
+            <Field label={t.ui.title}>
+              <input
+                required
+                maxLength={160}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </Field>
+            <Field label={t.ui.date}>
+              <input
+                required
+                type="date"
+                value={selected}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelected(value);
+                  if (value) {
+                    const date = new Date(`${value}T12:00:00`);
+                    setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+                  }
+                }}
+              />
+            </Field>
+            <Field label={t.ui.event_type}>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as Event["type"])}
+              >
+                {Object.entries(t.ui.event_types).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex gap-2">
+              <Button type="submit">{t.ui.save}</Button>
+              {editing && (
+                <Button type="button" variant="ghost" onClick={reset}>
+                  {t.ui.cancel}
+                </Button>
               )}
-            </Card>
-          );
-        })}
-      </div>
-
-      <div className="mt-12">
-        <Typography variant="h3" className="mb-6 italic">{lang === 'pt' ? 'Foco Próximo' : 'Upcoming Focus'}</Typography>
-        <div className="space-y-4">
-          <Card className="flex items-center gap-6 border-l-4 border-l-lumina-900">
-            <Typography variant="h3" className="w-16">18 May</Typography>
-            <div>
-              <Typography variant="body" className="font-semibold">{lang === 'pt' ? 'Retiro de Fim de Semana' : 'Spring Weekend Retreat'}</Typography>
-              <Typography variant="small">{lang === 'pt' ? 'Foco em Manifestação e Autocuidado' : 'Manifestation and Self-care focus'}</Typography>
             </div>
-            <Button variant="ghost" className="ml-auto">{t.common.details}</Button>
-          </Card>
-          <Card className="flex items-center gap-6 border-l-4 border-l-accent-lavender">
-            <Typography variant="h3" className="w-16">22 May</Typography>
-            <div>
-              <Typography variant="body" className="font-semibold">{lang === 'pt' ? 'Workshop de Fotografia' : 'Photography Workshop'}</Typography>
-              <Typography variant="small">{lang === 'pt' ? 'Aprendendo fotos estéticas manuais' : 'Learning manual aesthetic shots'}</Typography>
-            </div>
-            <Button variant="ghost" className="ml-auto">{t.common.details}</Button>
-          </Card>
-        </div>
+          </form>
+        </Card>
       </div>
     </div>
   );
-};
-
-export default CalendarView;
+}

@@ -11,6 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+test-results/
+storybook-static/
 
 # Editor directories and files
 .vscode/*

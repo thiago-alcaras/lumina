@@ -1,15 +1,93 @@
-
 export const translations = {
   pt: {
+    ui: {
+      save: "Salvar",
+      cancel: "Cancelar",
+      delete: "Excluir",
+      edit: "Editar",
+      add: "Adicionar",
+      name: "Nome",
+      date: "Data",
+      category: "Categoria",
+      image: "Imagem (PNG, JPG ou WebP)",
+      imageUrl: "Ou use uma URL de imagem",
+      empty: "Seu próximo capítulo começa aqui. Adicione o primeiro item.",
+      saved: "Salvo neste navegador.",
+      save_error:
+        "Não foi possível salvar. O armazenamento pode estar cheio ou indisponível. Exporte seus dados para preservá-los.",
+      load_error:
+        "Não foi possível ler os dados salvos. Eles foram preservados. Exporte uma cópia antes de restaurar um backup.",
+      invalid_data: "O backup contém dados inválidos.",
+      image_error: "Escolha uma imagem PNG, JPG ou WebP de até 10 MB.",
+      ai_unavailable:
+        "A IA não está configurada. Adicione GEMINI_API_KEY no servidor. Você pode adicionar imagens manualmente.",
+      ai_error: "Não foi possível consultar a IA. Tente novamente.",
+      loading: "Carregando seu espaço…",
+      export: "Exportar backup",
+      import_: "Importar backup",
+      backup:
+        "Seus dados ficam apenas neste navegador. Faça backups para guardá-los.",
+      local: "Espaço pessoal",
+      search: "Buscar nos seus planos, looks e reflexões…",
+      results: "Resultados da busca",
+      today: "Hoje",
+      previous: "Anterior",
+      next: "Próximo",
+      event: "Novo compromisso",
+      title: "Título",
+      event_type: "Tipo de compromisso",
+      calendar_subtitle: "Encontre um ritmo que faz sentido para você.",
+      upcoming: "Próximos compromissos",
+      no_events: "Nenhum compromisso neste dia.",
+      new_look: "Novo look",
+      new_vision: "Adicionar inspiração",
+      description: "Objetivo ou inspiração",
+      manual: "Adicionar imagem",
+      ai: "Gerar com IA",
+      assistant: "Assistente Lumina",
+      local_tips: "Sugestões locais",
+      journal_prompt: "Qual foi o pequeno momento que iluminou seu dia?",
+      respond: "Escrever no diário",
+      mood: "Como você está hoje?",
+      confirm_delete: "Excluir este item?",
+      confirm_import:
+        "Substituir os dados atuais pelo backup? Exporte uma cópia antes de continuar.",
+      journal_empty: "Suas reflexões aparecerão aqui.",
+      ai_notice:
+        "A consulta envia seus compromissos de hoje à IA. As sugestões locais funcionam sem conexão.",
+      storage_title: "Cuide das suas memórias",
+      read: "Ler",
+      all: "Todos",
+      import_success: "Backup restaurado.",
+      raw_export: "Exportar dados originais",
+      event_types: {
+        appointment: "Compromisso",
+        social: "Social",
+        deadline: "Prazo",
+        "self-care": "Autocuidado",
+      },
+      moods: {
+        happy: "Feliz",
+        calm: "Calmo",
+        productive: "Produtivo",
+        tired: "Cansado",
+        inspired: "Inspirado",
+      },
+      tips: [
+        "Escolha uma prioridade possível para hoje.",
+        "Faça uma pausa longe das telas.",
+        "Reserve dez minutos para cuidar de você.",
+      ],
+    },
     nav: {
       dashboard: "Painel",
       calendar: "Calendário",
       registry: "Estilo",
       vision: "Visão",
-      journal: "Diário"
+      journal: "Diário",
     },
     dashboard: {
-      greeting: "Bom dia, Sophie",
+      greeting: "Seu espaço para florescer",
       quote: "Cada dia é uma nova tela para sua obra-prima.",
       aura_guide: "Guia Lumina",
       ask_ai: "Perguntar à Lumina",
@@ -27,15 +105,17 @@ export const translations = {
         casual: "Casual",
         formal: "Formal",
         work: "Trabalho",
-        sport: "Esporte"
-      }
+        sport: "Esporte",
+      },
     },
     vision: {
       title: "Manifeste seu Futuro",
-      subtitle: "Descreva a estética ou objetivo que deseja visualizar, e nossa IA manifestará uma imagem para o seu quadro.",
-      input_placeholder: "Ex: Uma manhã tranquila na biblioteca ao nascer do sol com café",
+      subtitle:
+        "Descreva a estética ou objetivo que deseja visualizar, e nossa IA manifestará uma imagem para o seu quadro.",
+      input_placeholder:
+        "Ex: Uma manhã tranquila na biblioteca ao nascer do sol com café",
       button: "Manifestar",
-      loading: "Manifestando..."
+      loading: "Manifestando...",
     },
     journal: {
       title: "O Brilho Diário",
@@ -45,25 +125,104 @@ export const translations = {
       morning_placeholder: "Hoje eu pretendo...",
       evening_placeholder: "O que te fez sorrir hoje?",
       save: "Salvar",
-      previous: "Entradas Anteriores"
+      previous: "Entradas Anteriores",
     },
     common: {
       search: "Buscar",
       edit: "Editar",
       details: "Detalhes",
-      premium: "Plano Premium"
-    }
+      premium: "Plano Premium",
+    },
   },
   en: {
+    ui: {
+      save: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      edit: "Edit",
+      add: "Add",
+      name: "Name",
+      date: "Date",
+      category: "Category",
+      image: "Image (PNG, JPG or WebP)",
+      imageUrl: "Or use an image URL",
+      empty: "Your next chapter starts here. Add the first item.",
+      saved: "Saved in this browser.",
+      save_error:
+        "Could not save. Storage may be full or unavailable. Export your data to keep it safe.",
+      load_error:
+        "Could not read saved data. It has been preserved. Export a copy before restoring a backup.",
+      invalid_data: "The backup contains invalid data.",
+      image_error: "Choose a PNG, JPG or WebP image up to 10 MB.",
+      ai_unavailable:
+        "AI is not configured. Add GEMINI_API_KEY on the server. You can add images manually.",
+      ai_error: "Could not reach AI. Try again.",
+      loading: "Loading your space…",
+      export: "Export backup",
+      import_: "Import backup",
+      backup:
+        "Your data stays in this browser only. Export backups to keep it safe.",
+      local: "Personal space",
+      search: "Search your plans, looks and reflections…",
+      results: "Search results",
+      today: "Today",
+      previous: "Previous",
+      next: "Next",
+      event: "New event",
+      title: "Title",
+      event_type: "Event type",
+      calendar_subtitle: "Find a rhythm that feels right for you.",
+      upcoming: "Upcoming events",
+      no_events: "No events on this day.",
+      new_look: "New look",
+      new_vision: "Add inspiration",
+      description: "Goal or inspiration",
+      manual: "Add image",
+      ai: "Generate with AI",
+      assistant: "Lumina Assistant",
+      local_tips: "Local suggestions",
+      journal_prompt: "What small moment brightened your day?",
+      respond: "Write in your journal",
+      mood: "How are you today?",
+      confirm_delete: "Delete this item?",
+      confirm_import:
+        "Replace current data with this backup? Export a copy before continuing.",
+      journal_empty: "Your reflections will appear here.",
+      ai_notice:
+        "This request sends today's events to AI. Local suggestions work offline.",
+      storage_title: "Take care of your memories",
+      read: "Read",
+      all: "All",
+      import_success: "Backup restored.",
+      raw_export: "Export original data",
+      event_types: {
+        appointment: "Appointment",
+        social: "Social",
+        deadline: "Deadline",
+        "self-care": "Self-care",
+      },
+      moods: {
+        happy: "Happy",
+        calm: "Calm",
+        productive: "Productive",
+        tired: "Tired",
+        inspired: "Inspired",
+      },
+      tips: [
+        "Choose one achievable priority today.",
+        "Take a break away from screens.",
+        "Set aside ten minutes to care for yourself.",
+      ],
+    },
     nav: {
       dashboard: "Dashboard",
       calendar: "Calendar",
       registry: "Registry",
       vision: "Vision",
-      journal: "Journal"
+      journal: "Journal",
     },
     dashboard: {
-      greeting: "Good morning, Sophie",
+      greeting: "Your space to flourish",
       quote: "Every day is a new canvas for your masterpiece.",
       aura_guide: "Lumina Guide",
       ask_ai: "Ask Lumina",
@@ -81,15 +240,17 @@ export const translations = {
         casual: "Casual",
         formal: "Formal",
         work: "Work",
-        sport: "Sport"
-      }
+        sport: "Sport",
+      },
     },
     vision: {
       title: "Manifest Your Future",
-      subtitle: "Describe the aesthetic or goal you want to visualize, and our AI will manifest an image for your board.",
-      input_placeholder: "e.g. A peaceful morning library at sunrise with coffee",
+      subtitle:
+        "Describe the aesthetic or goal you want to visualize, and our AI will manifest an image for your board.",
+      input_placeholder:
+        "e.g. A peaceful morning library at sunrise with coffee",
       button: "Manifest",
-      loading: "Manifesting..."
+      loading: "Manifesting...",
     },
     journal: {
       title: "The Daily Glow",
@@ -99,15 +260,17 @@ export const translations = {
       morning_placeholder: "Today I intend to...",
       evening_placeholder: "What made you smile today?",
       save: "Save",
-      previous: "Previous Entries"
+      previous: "Previous Entries",
     },
     common: {
       search: "Search",
       edit: "Edit",
       details: "Details",
-      premium: "Premium Plan"
-    }
-  }
+      premium: "Premium Plan",
+    },
+  },
 };
 
-export type Language = 'pt' | 'en';
+export type Language = "pt" | "en";
+
+export type Translations = typeof translations.pt;

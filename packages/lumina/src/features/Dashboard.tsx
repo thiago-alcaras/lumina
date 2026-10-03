@@ -1,87 +1,184 @@
-
-import React from 'react';
-import { Typography, Card, Button } from '../components/DesignSystem';
-import { Event, VisionItem } from '../types';
-import { Language } from '../locales';
-
-interface DashboardProps {
-  events: Event[];
-  visionItems: VisionItem[];
-  t: any;
-  lang: Language;
-}
-
-// Fixed: Added lang to props to match what is passed from App.tsx
-const Dashboard: React.FC<DashboardProps> = ({ events, visionItems, t, lang }) => {
+import { useState } from "react";
+import {
+  Button,
+  Card,
+  Typography,
+  Empty,
+  moodIcons,
+  errorMessage,
+  type FeatureProps,
+} from "../components/Shared";
+import { localDate, formatDate } from "../services/dateService";
+import { getPlannerSuggestions } from "../services/geminiService";
+import type { Mood, View } from "../types";
+export default function Dashboard({
+  data,
+  setData,
+  t,
+  lang,
+  notify,
+  navigate,
+}: FeatureProps & { navigate: (view: View, date?: string) => void }) {
+  const today = localDate();
+  const events = data.events
+    .filter((e) => e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+  const mood = data.moods.find((v) => v.date === today)?.mood;
+  const [tips, setTips] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-8">
-        <section>
-          <div className="flex justify-between items-end mb-6">
-            <Typography variant="h2">{t.dashboard.aura_guide}</Typography>
-            <button className="text-lumina-500 text-sm hover:underline">{t.nav.calendar}</button>
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Typography variant="h2">{t.ui.upcoming}</Typography>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("calendar")}
+            >
+              {t.nav.calendar} →
+            </Button>
           </div>
-          <div className="grid gap-4">
-            {events.length > 0 ? events.map(event => (
-              <Card key={event.id} className="flex items-center gap-6 group hover:border-lumina-300 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full bg-accent-sage flex items-center justify-center text-emerald-700">
-                  {event.type === 'social' ? '✨' : '🧘'}
-                </div>
-                <div className="flex-1">
+          {events.length ? (
+            events.map((event) => (
+              <Card key={event.id}>
+                <button
+                  className="text-left w-full"
+                  onClick={() => navigate("calendar", event.date)}
+                >
+                  <Typography variant="small">
+                    {formatDate(event.date, lang)} ·{" "}
+                    {t.ui.event_types[event.type]}
+                  </Typography>
                   <Typography variant="h3">{event.title}</Typography>
-                  <Typography variant="small" className="uppercase tracking-widest text-[10px]">10:00 AM — {event.type}</Typography>
-                </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="sm">{t.common.edit}</Button>
-                </div>
+                </button>
               </Card>
-            )) : (
-              <Card className="text-center py-10 opacity-60">
-                <Typography>{t.dashboard.no_plans}</Typography>
-              </Card>
-            )}
-          </div>
+            ))
+          ) : (
+            <Empty text={t.dashboard.no_plans} />
+          )}
         </section>
-
-        <section>
-          <Typography variant="h2" className="mb-6">{t.dashboard.recent_manifestations}</Typography>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {visionItems.length > 0 ? visionItems.slice(0, 3).map(item => (
-              <div key={item.id} className="aspect-square rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
-                <img src={item.imageUrl} alt={item.prompt} className="w-full h-full object-cover" />
-              </div>
-            )) : [1,2,3].map(i => (
-              <div key={i} className="aspect-square rounded-2xl bg-lumina-100 flex items-center justify-center border-2 border-dashed border-lumina-200 text-center p-4">
-                <Typography variant="small">Manifestação {i}</Typography>
-              </div>
-            ))}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Typography variant="h2">
+              {t.dashboard.recent_manifestations}
+            </Typography>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate("vision-board")}
+            >
+              {t.ui.add} →
+            </Button>
           </div>
+          {data.vision.length ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {data.vision.slice(0, 3).map((v) => (
+                <button key={v.id} onClick={() => navigate("vision-board")}>
+                  <img
+                    src={v.imageUrl}
+                    alt={v.prompt}
+                    className="aspect-square rounded-2xl object-cover w-full"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Empty text={t.ui.empty} />
+          )}
         </section>
       </div>
-
-      <div className="space-y-8">
-        <Card className="bg-lumina-900 text-white relative overflow-hidden">
-          <Typography variant="h2" className="text-white mb-4 !font-normal italic">Aura Assistant</Typography>
-          <Button variant="secondary" fullWidth className="!bg-white !text-lumina-900">{t.dashboard.ask_ai}</Button>
+      <aside className="space-y-6">
+        <Card className="!bg-lumina-900">
+          <Typography variant="h2" className="!text-white italic mb-4">
+            {t.ui.assistant}
+          </Typography>
+          <p className="text-sm text-lumina-100 mb-5">{t.ui.ai_notice}</p>
+          <div className="space-y-3">
+            <Button
+              fullWidth
+              variant="secondary"
+              isLoading={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  setTips(
+                    await getPlannerSuggestions(
+                      JSON.stringify(
+                        data.events.filter((e) => e.date === today),
+                      ),
+                      lang,
+                    ),
+                  );
+                } catch (error) {
+                  notify(errorMessage(error, t));
+                  setTips(t.ui.tips);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t.dashboard.ask_ai}
+            </Button>
+            <Button
+              fullWidth
+              variant="outline"
+              className="!text-white"
+              onClick={() => setTips(t.ui.tips)}
+            >
+              {t.ui.local_tips}
+            </Button>
+          </div>
+          {tips.length > 0 && (
+            <ul className="list-disc pl-5 mt-5 space-y-3 text-sm text-white">
+              {tips.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))}
+            </ul>
+          )}
         </Card>
-
         <Card>
-          <Typography variant="h3" className="mb-4">{t.dashboard.todays_mood}</Typography>
-          <div className="flex justify-between">
-            {['✨', '☁️', '🌙', '🌊', '🌸'].map((emoji, i) => (
-              <button key={i} className="w-10 h-10 rounded-full hover:bg-lumina-50 transition-colors flex items-center justify-center text-xl">{emoji}</button>
+          <Typography variant="h3" className="mb-4">
+            {t.dashboard.todays_mood}
+          </Typography>
+          <div className="flex justify-between gap-1">
+            {Object.entries(moodIcons).map(([key, icon]) => (
+              <button
+                key={key}
+                title={t.ui.moods[key as Mood]}
+                aria-label={t.ui.moods[key as Mood]}
+                aria-pressed={mood === key}
+                onClick={() =>
+                  setData((d) => ({
+                    ...d,
+                    moods: [
+                      ...d.moods.filter((v) => v.date !== today),
+                      { date: today, mood: key as Mood },
+                    ],
+                  }))
+                }
+                className={`w-10 h-10 rounded-full text-xl ${mood === key ? "bg-accent-rose ring-2 ring-lumina-400" : "hover:bg-lumina-50"}`}
+              >
+                {icon}
+              </button>
             ))}
           </div>
+          {mood && (
+            <p className="text-sm mt-3 text-lumina-700">{t.ui.moods[mood]}</p>
+          )}
         </Card>
-
-        <Card className="bg-accent-lavender/30">
-          <Typography variant="h3" className="mb-2">{t.dashboard.journal_prompt}</Typography>
-          <Typography variant="body" className="text-sm mb-4">"Qual a cor da sua energia hoje?"</Typography>
-          <Button variant="ghost" size="sm" className="p-0 underline">Responder</Button>
+        <Card className="!bg-accent-lavender/30">
+          <Typography variant="h3" className="mb-2">
+            {t.dashboard.journal_prompt}
+          </Typography>
+          <Typography className="mb-4">{t.ui.journal_prompt}</Typography>
+          <Button variant="ghost" size="sm" onClick={() => navigate("journal")}>
+            {t.ui.respond} →
+          </Button>
         </Card>
-      </div>
+      </aside>
     </div>
   );
-};
-
-export default Dashboard;
+}

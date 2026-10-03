@@ -6,17 +6,32 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=lumina",
-    "dev:lumina": "npm run dev --workspace=lumina",
-    "dev:aurora": "npm run storybook --workspace=aurora",
-    "storybook": "npm run storybook --workspace=aurora",
-    "build:storybook": "npm run build-storybook --workspace=aurora",
-    "build": "npm run build --workspaces",
+    "dev": "node scripts/dev.mjs",
+    "dev:lumina": "node scripts/dev.mjs",
+    "dev:aurora": "npm run storybook --workspace=@lumina/aurora",
+    "storybook": "npm run storybook --workspace=@lumina/aurora",
+    "build:storybook": "npm run build-storybook --workspace=@lumina/aurora",
+    "build": "npm run build:aurora && npm run build:lumina",
     "build:lumina": "npm run build --workspace=lumina",
-    "build:aurora": "npm run build --workspace=aurora"
+    "build:aurora": "npm run build --workspace=@lumina/aurora",
+    "start": "node server/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
+    "typecheck": "tsc --noEmit -p packages/lumina && tsc --noEmit -p packages/aurora"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.14.0",
+    "prettier": "^3.9.9",
     "typescript": "~5.8.2"
+  },
+  "overrides": {
+    "lodash": "^4.18.1",
+    "@storybook/addon-actions": {
+      "uuid": "^11.1.1"
+    }
   }
 }

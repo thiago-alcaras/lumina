@@ -1,134 +1,337 @@
-
-import React, { useState, useEffect } from 'react';
-import { View, Outfit, VisionItem, Event } from './types';
-import { ICONS, COLORS } from './constants';
-import { Button, Typography, Card } from './components/DesignSystem';
-import { translations, Language } from './locales';
-import { db } from './services/persistenceService';
-
-// Views
-import Dashboard from './features/Dashboard';
-import CalendarView from './features/CalendarView';
-import Registry from './features/Registry';
-import VisionBoard from './features/VisionBoard';
-import Journal from './features/Journal';
-
-const App: React.FC = () => {
-  const [lang, setLang] = useState<Language>('pt');
-  const [activeView, setActiveView] = useState<View>('dashboard');
-  const [outfits, setOutfits] = useState<Outfit[]>([]);
-  const [visionItems, setVisionItems] = useState<VisionItem[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-
+import { useState, useEffect, useRef } from "react";
+import { Button, Card, Typography, errorMessage } from "./components/Shared";
+import { translations, type Language } from "./locales";
+import { db, emptyData } from "./services/persistenceService";
+import { localDate } from "./services/dateService";
+import type { PlannerData, View } from "./types";
+import { ICONS } from "./constants";
+import Dashboard from "./features/Dashboard";
+import CalendarView from "./features/CalendarView";
+import Registry from "./features/Registry";
+import VisionBoard from "./features/VisionBoard";
+import Journal from "./features/Journal";
+const views: View[] = [
+  "dashboard",
+  "calendar",
+  "registry",
+  "vision-board",
+  "journal",
+];
+const icons = [
+  ICONS.Dashboard,
+  ICONS.Calendar,
+  ICONS.Registry,
+  ICONS.Vision,
+  ICONS.Journal,
+];
+function download(text: string, name: string) {
+  const url = URL.createObjectURL(
+    new Blob([text], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export default function App() {
+  const [lang, setLang] = useState<Language>("pt");
   const t = translations[lang];
-
+  const [view, setView] = useState<View>("dashboard");
+  const [calendarDate, setCalendarDate] = useState(localDate());
+  const [data, setData] = useState<PlannerData>(emptyData);
+  const [ready, setReady] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const importInput = useRef<HTMLInputElement>(null);
+  const generation = useRef(0);
   useEffect(() => {
-    const loadData = async () => {
-      const savedOutfits = await db.outfits.getAll();
-      const savedVision = await db.vision.getAll();
-      const savedEvents = await db.events.getAll();
-      
-      setOutfits(savedOutfits.length ? savedOutfits : [
-        { id: '1', name: 'Picnic de Primavera', category: 'casual', image: 'https://picsum.photos/seed/outfit1/400/600', dateAdded: new Date().toISOString() }
-      ]);
-      setVisionItems(savedVision);
-      setEvents(savedEvents.length ? savedEvents : [
-        { id: '1', title: 'Café com Sarah', date: new Date().toISOString().split('T')[0], type: 'social' }
-      ]);
+    let active = true;
+    (async () => {
+      try {
+        const [saved, language] = await Promise.all([db.load(), db.language()]);
+        if (active) {
+          setData(saved);
+          setLang(language);
+          setReady(true);
+        }
+      } catch {
+        if (active) {
+          setLoadFailed(true);
+          setReady(true);
+        }
+      }
+    })();
+    return () => {
+      active = false;
     };
-    loadData();
   }, []);
-
-  // Save triggers
-  useEffect(() => { db.outfits.save(outfits); }, [outfits]);
-  useEffect(() => { db.vision.save(visionItems); }, [visionItems]);
-  useEffect(() => { db.events.save(events); }, [events]);
-
-  const renderView = () => {
-    const props = { t, lang };
-    switch (activeView) {
-      case 'dashboard': return <Dashboard events={events} visionItems={visionItems} {...props} />;
-      case 'calendar': return <CalendarView events={events} setEvents={setEvents} {...props} />;
-      case 'registry': return <Registry outfits={outfits} setOutfits={setOutfits} {...props} />;
-      case 'vision-board': return <VisionBoard items={visionItems} setItems={setVisionItems} {...props} />;
-      case 'journal': return <Journal {...props} />;
-      default: return <Dashboard events={events} visionItems={visionItems} {...props} />;
-    }
+  useEffect(() => {
+    if (!ready || loadFailed) return;
+    const current = ++generation.current;
+    db.save(data)
+      .then(() => {
+        if (generation.current === current)
+          setMessage(translations[lang].ui.saved);
+      })
+      .catch(() => {
+        if (generation.current === current)
+          setMessage(translations[lang].ui.save_error);
+      });
+  }, [data, ready, loadFailed, lang]);
+  useEffect(() => {
+    document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+  }, [lang]);
+  const labels = [
+    t.nav.dashboard,
+    t.nav.calendar,
+    t.nav.registry,
+    t.nav.vision,
+    t.nav.journal,
+  ];
+  const navigate = (next: View, date?: string) => {
+    if (next === "calendar") setCalendarDate(date ?? localDate());
+    setView(next);
+    setSearch("");
+    window.scrollTo(0, 0);
   };
-
+  const props = { data, setData, t, lang, notify: setMessage };
+  const query = search.trim().toLocaleLowerCase();
+  const results = [
+    ...data.events.map((v) => ({
+      id: v.id,
+      text: v.title,
+      date: v.date,
+      view: "calendar" as View,
+    })),
+    ...data.outfits.map((v) => ({
+      id: v.id,
+      text: v.name,
+      date: undefined,
+      view: "registry" as View,
+    })),
+    ...data.vision.map((v) => ({
+      id: v.id,
+      text: v.prompt,
+      date: undefined,
+      view: "vision-board" as View,
+    })),
+    ...data.journal.map((v) => ({
+      id: v.id,
+      text: v.content,
+      date: undefined,
+      view: "journal" as View,
+    })),
+  ].filter((v) => v.text.toLocaleLowerCase().includes(query));
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-lumina-50">
-      {/* Sidebar Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:relative md:w-24 lg:w-64 bg-white md:min-h-screen border-t md:border-t-0 md:border-r border-lumina-100 flex md:flex-col justify-around md:justify-start items-center md:items-stretch p-2 md:p-6 shadow-2xl md:shadow-none">
-        <div className="hidden md:flex items-center justify-between mb-12 px-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent-rose flex items-center justify-center">
-              <span className="text-lumina-900 font-serif font-bold italic">L</span>
-            </div>
-            <Typography variant="h2" className="hidden lg:block !text-xl tracking-tight">Lumina</Typography>
-          </div>
+    <div className="min-h-screen md:flex">
+      <nav
+        aria-label="Lumina"
+        className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-lumina-100 flex justify-around p-2 md:sticky md:top-0 md:h-screen md:w-24 lg:w-64 md:shrink-0 md:border-r md:border-t-0 md:flex-col md:justify-start md:p-5"
+      >
+        <div className="hidden md:flex items-center gap-3 mb-12 px-2">
+          <span className="rounded-full bg-accent-rose w-10 h-10 flex items-center justify-center font-serif italic text-2xl">
+            L
+          </span>
+          <span className="hidden lg:block font-serif text-2xl font-bold">
+            Lumina
+          </span>
         </div>
-
-        <div className="flex md:flex-col w-full gap-2 lg:gap-4">
-          <NavItem active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} icon={<ICONS.Dashboard />} label={t.nav.dashboard} />
-          <NavItem active={activeView === 'calendar'} onClick={() => setActiveView('calendar')} icon={<ICONS.Calendar />} label={t.nav.calendar} />
-          <NavItem active={activeView === 'registry'} onClick={() => setActiveView('registry')} icon={<ICONS.Registry />} label={t.nav.registry} />
-          <NavItem active={activeView === 'vision-board'} onClick={() => setActiveView('vision-board')} icon={<ICONS.Vision />} label={t.nav.vision} />
-          <NavItem active={activeView === 'journal'} onClick={() => setActiveView('journal')} icon={<ICONS.Journal />} label={t.nav.journal} />
-        </div>
-
-        <div className="mt-auto hidden md:flex flex-col gap-4">
-          <div className="flex items-center justify-center lg:justify-start gap-2 px-2">
-             <button onClick={() => setLang('pt')} className={`text-xs font-bold ${lang === 'pt' ? 'text-lumina-900 underline' : 'text-lumina-400'}`}>PT</button>
-             <span className="text-lumina-200">|</span>
-             <button onClick={() => setLang('en')} className={`text-xs font-bold ${lang === 'en' ? 'text-lumina-900 underline' : 'text-lumina-400'}`}>EN</button>
-          </div>
-          <div className="flex flex-col items-center lg:items-start gap-4 p-4 rounded-2xl bg-lumina-50 border border-lumina-100">
-            <div className="w-10 h-10 rounded-full bg-lumina-200" />
-            <div className="hidden lg:block">
-              <Typography variant="small" className="font-bold">Sophie Miller</Typography>
-              <Typography variant="small" className="text-xs">{t.common.premium}</Typography>
-            </div>
-          </div>
+        {views.map((next, i) => {
+          const Icon = icons[i];
+          return (
+            <button
+              key={next}
+              title={labels[i]}
+              aria-label={labels[i]}
+              aria-current={view === next ? "page" : undefined}
+              onClick={() => navigate(next)}
+              className={`flex flex-col lg:flex-row items-center gap-2 rounded-xl p-2 md:p-3 md:mb-2 lg:px-4 ${view === next ? "bg-accent-rose text-lumina-900" : "text-lumina-700 hover:bg-lumina-50"}`}
+            >
+              <Icon />
+              <span className="text-[10px] lg:text-sm md:hidden lg:inline">
+                {labels[i]}
+              </span>
+            </button>
+          );
+        })}
+        <div className="hidden md:block mt-auto lg:p-3">
+          <p className="hidden lg:block text-xs tracking-widest uppercase text-lumina-700">
+            {t.ui.local}
+          </p>
+          <p className="hidden lg:block text-sm italic font-serif mt-2">
+            {t.dashboard.quote}
+          </p>
         </div>
       </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
-        <header className="p-6 md:p-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <Typography variant="h1" className="mb-2">{t.dashboard.greeting}</Typography>
-            <Typography variant="body" className="italic opacity-80 font-serif">"{t.dashboard.quote}"</Typography>
-          </div>
-          <div className="flex gap-4 items-center">
-            <div className="md:hidden flex gap-2 mr-4">
-               <button onClick={() => setLang('pt')} className={`text-xs font-bold ${lang === 'pt' ? 'text-lumina-900 underline' : 'text-lumina-400'}`}>PT</button>
-               <button onClick={() => setLang('en')} className={`text-xs font-bold ${lang === 'en' ? 'text-lumina-900 underline' : 'text-lumina-400'}`}>EN</button>
+      <main className="min-w-0 flex-1 pb-24 md:pb-8">
+        <header className="p-5 md:p-10 space-y-6">
+          <div className="flex flex-wrap justify-between gap-4">
+            <div>
+              <p className="uppercase tracking-[0.2em] text-xs text-lumina-700 mb-3">
+                Lumina ·{" "}
+                {new Date().toLocaleDateString(
+                  lang === "pt" ? "pt-BR" : "en-US",
+                  { weekday: "long", day: "numeric", month: "long" },
+                )}
+              </p>
+              <Typography variant="h1">{t.dashboard.greeting}</Typography>
             </div>
-            <Button variant="outline" size="sm" className="hidden md:flex gap-2">
-              <ICONS.Search /> {t.common.search}
-            </Button>
+            <div className="flex items-start gap-2">
+              {(["pt", "en"] as const).map((l) => (
+                <Button
+                  key={l}
+                  size="sm"
+                  variant={lang === l ? "secondary" : "ghost"}
+                  aria-pressed={lang === l}
+                  onClick={() => {
+                    setLang(l);
+                    db.language(l).catch(() =>
+                      setMessage(translations[l].ui.save_error),
+                    );
+                  }}
+                >
+                  {l.toUpperCase()}
+                </Button>
+              ))}
+            </div>
           </div>
+          <input
+            type="search"
+            aria-label={t.common.search}
+            placeholder={t.ui.search}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={!ready || loadFailed}
+          />
         </header>
-
-        <div className="px-6 md:px-10 pb-10">
-          {renderView()}
+        <div className="px-5 md:px-10 space-y-6">
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-sm text-lumina-700 min-h-5"
+          >
+            {message}
+          </p>
+          {!ready ? (
+            <Typography>{t.ui.loading}</Typography>
+          ) : loadFailed ? (
+            <Card>
+              <p role="alert" className="mb-4">
+                {t.ui.load_error}
+              </p>
+              <Button
+                onClick={() => {
+                  try {
+                    const originals: Record<string, string | null> = {};
+                    for (const key of [
+                      "lumina_planner_v1",
+                      "lumina_outfits",
+                      "lumina_vision",
+                      "lumina_events",
+                    ])
+                      originals[key] = localStorage.getItem(key);
+                    download(
+                      JSON.stringify(originals, null, 2),
+                      `lumina-original-${localDate()}.json`,
+                    );
+                  } catch {
+                    setMessage(t.ui.save_error);
+                  }
+                }}
+              >
+                {t.ui.raw_export}
+              </Button>
+            </Card>
+          ) : query ? (
+            <section className="space-y-3">
+              <Typography variant="h2">{t.ui.results}</Typography>
+              {results.length ? (
+                results.map((v) => (
+                  <Card key={`${v.view}-${v.id}`}>
+                    <button
+                      className="text-left w-full break-words"
+                      onClick={() => navigate(v.view, v.date)}
+                    >
+                      <p className="text-xs text-lumina-700 mb-2">
+                        {labels[views.indexOf(v.view)]}
+                      </p>
+                      <p className="line-clamp-3">{v.text}</p>
+                    </button>
+                  </Card>
+                ))
+              ) : (
+                <Typography>{t.ui.empty}</Typography>
+              )}
+            </section>
+          ) : view === "dashboard" ? (
+            <Dashboard {...props} navigate={navigate} />
+          ) : view === "calendar" ? (
+            <CalendarView
+              {...props}
+              key={calendarDate}
+              initialDate={calendarDate}
+            />
+          ) : view === "registry" ? (
+            <Registry {...props} />
+          ) : view === "vision-board" ? (
+            <VisionBoard {...props} />
+          ) : (
+            <Journal {...props} />
+          )}
+          {ready && (
+            <footer className="border-t border-lumina-200 pt-6 mt-10 flex flex-wrap items-center justify-between gap-4">
+              <p className="text-xs text-lumina-700 max-w-md">{t.ui.backup}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={loadFailed}
+                  onClick={() =>
+                    download(db.export(data), `lumina-${localDate()}.json`)
+                  }
+                >
+                  {t.ui.export}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => importInput.current?.click()}
+                >
+                  {t.ui.import_}
+                </Button>
+                <input
+                  ref={importInput}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  aria-label={t.ui.import_}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file || !confirm(t.ui.confirm_import)) return;
+                    try {
+                      if (file.size > 25 * 1024 * 1024)
+                        throw new Error("invalid_data");
+                      const restored = await db.import(await file.text());
+                      setData(restored);
+                      setLoadFailed(false);
+                      setMessage(t.ui.import_success);
+                    } catch (error) {
+                      setMessage(
+                        error instanceof SyntaxError
+                          ? t.ui.invalid_data
+                          : errorMessage(error, t),
+                      );
+                    }
+                  }}
+                />
+              </div>
+            </footer>
+          )}
         </div>
       </main>
     </div>
   );
-};
-
-const NavItem: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
-  <button 
-    onClick={onClick}
-    className={`flex flex-col md:flex-row items-center gap-3 p-3 md:px-4 md:py-3 rounded-xl transition-all duration-300 group
-      ${active ? 'bg-accent-rose text-lumina-900 shadow-sm' : 'text-lumina-400 hover:text-lumina-600 hover:bg-lumina-50'}`}
-  >
-    <span className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
-    <span className="text-[10px] md:text-sm font-medium lg:block hidden">{label}</span>
-    <span className="text-[10px] md:hidden">{label}</span>
-  </button>
-);
-
-export default App;
+}
