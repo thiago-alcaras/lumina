@@ -6,17 +6,28 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=lumina",
-    "dev:lumina": "npm run dev --workspace=lumina",
-    "dev:aurora": "npm run storybook --workspace=aurora",
-    "storybook": "npm run storybook --workspace=aurora",
-    "build:storybook": "npm run build-storybook --workspace=aurora",
-    "build": "npm run build --workspaces",
-    "build:lumina": "npm run build --workspace=lumina",
-    "build:aurora": "npm run build --workspace=aurora"
+    "dev": "pnpm --filter lumina dev",
+    "build": "pnpm --filter lumina build",
+    "preview": "pnpm --filter lumina preview",
+    "api": "node --env-file=.env server/index.mjs",
+    "test": "node --test server/*.test.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^1.35.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "stripe": "^18.5.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^22.14.0",
+    "prettier": "^3.9.10",
     "typescript": "~5.8.2"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
   }
 }

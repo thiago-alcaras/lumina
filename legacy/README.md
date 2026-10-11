@@ -1,0 +1,1 @@
+The previous planner and Aurora library are archived here for reference. They are not build inputs, runtime code, or supported entry points. Their old setup guides are superseded by the root README and docs/PRODUCTION.md. In particular, never use the old browser-side AI configuration in production.

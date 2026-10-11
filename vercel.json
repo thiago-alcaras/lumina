@@ -1,0 +1,11 @@
+{
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "packages/lumina/dist",
+  "rewrites": [
+    {
+      "source": "/((?!assets/|images/|icon[^/]*|manifest\\.webmanifest|sw\\.js).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
