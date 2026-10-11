@@ -45,6 +45,29 @@ export function post(row: any): Post {
     createdAt: row.created_at,
   };
 }
+async function lookImage(image: string): Promise<string> {
+  const url = new URL(image, location.origin);
+  if (url.origin !== new URL(env.VITE_SUPABASE_URL).origin) return image;
+  const marker = "/looks/";
+  const index = url.pathname.indexOf(marker);
+  if (index < 0) return image;
+  const path = decodeURIComponent(url.pathname.slice(index + marker.length));
+  return unwrap(
+    await supabase!.storage.from("looks").createSignedUrl(path, 3600),
+  ).signedUrl;
+}
+async function displayPost(value: Post): Promise<Post> {
+  return {
+    ...value,
+    image: await lookImage(value.image),
+    pieces: await Promise.all(
+      value.pieces.map(async (piece) => ({
+        ...piece,
+        image: await lookImage(piece.image),
+      })),
+    ),
+  };
+}
 export async function api(path: string, body?: unknown) {
   const session = unwrap(await supabase!.auth.getSession()).session;
   if (!session) throw new Error("Entre na sua conta para continuar.");
@@ -75,7 +98,7 @@ export async function loadPage(
       search_text: search,
     }),
   );
-  return (rows || []).map(post);
+  return Promise.all((rows || []).map((row: any) => displayPost(post(row))));
 }
 export async function signedImage(path: string) {
   return unwrap(
@@ -114,7 +137,7 @@ export async function loadAccount(): Promise<State> {
     stories,
   ] = results.map(unwrap);
   const first = await loadPage();
-  const own = unwrap(
+  const ownRows = unwrap(
     await supabase!
       .from("posts")
       .select("*, author:profiles!posts_owner_id_fkey(*)")
@@ -122,9 +145,11 @@ export async function loadAccount(): Promise<State> {
       .order("created_at", { ascending: false })
       .limit(100),
   ).map(post);
-  const extra = (saved as any[])
+  const own = await Promise.all(ownRows.map(displayPost));
+  const extraRows = (saved as any[])
     .map((s) => (s.posts ? post(s.posts) : null))
     .filter(Boolean) as Post[];
+  const extra = await Promise.all(extraRows.map(displayPost));
   const posts = Array.from(
     new Map([...first, ...own, ...extra].map((p) => [p.id, p])).values(),
   );
@@ -148,13 +173,15 @@ export async function loadAccount(): Promise<State> {
       note: r.note,
     })),
     interests: Object.fromEntries(interests.map((r: any) => [r.mood, r.score])),
-    stories: stories.map((r: any) => ({
-      id: r.id,
-      author: person(r.author),
-      image: r.image,
-      title: r.title,
-      expiresAt: r.expires_at,
-    })),
+    stories: await Promise.all(
+      stories.map(async (r: any) => ({
+        id: r.id,
+        author: person(r.author),
+        image: await lookImage(r.image),
+        title: r.title,
+        expiresAt: r.expires_at,
+      })),
+    ),
     comments: [],
   };
 }
@@ -238,7 +265,7 @@ export async function publish(p: Post) {
         pieces,
       }),
     );
-    return { ...p, image: image.url, pieces };
+    return displayPost({ ...p, image: image.url, pieces });
   } catch (error) {
     await supabase!.storage.from("looks").remove([image.path]);
     throw error;
@@ -255,7 +282,7 @@ export async function publishStory(s: Story) {
       expires_at: s.expiresAt,
     }),
   );
-  return { ...s, image: image.url };
+  return { ...s, image: await lookImage(image.url) };
 }
 export async function toggleRelation(
   table: "likes" | "saved" | "follows" | "blocks",

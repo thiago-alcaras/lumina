@@ -214,12 +214,65 @@ app.post(
       const response = await ai.models.generateContent({
         model: env.GEMINI_MODEL || "gemini-2.5-flash",
         contents: [{ role: "user", parts }],
-        config: { responseMimeType: "application/json", temperature: 0.1 },
+        config: {
+          responseMimeType: "application/json",
+          temperature: 0.1,
+          responseJsonSchema: {
+            type: "object",
+            required: ["pieces"],
+            properties: {
+              pieces: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: [
+                    "name",
+                    "category",
+                    "color",
+                    "brand",
+                    "bbox",
+                    "existingId",
+                    "confidence",
+                  ],
+                  properties: {
+                    name: { type: "string" },
+                    category: {
+                      type: "string",
+                      enum: [
+                        "Blusa",
+                        "Tricô",
+                        "Calça",
+                        "Saia",
+                        "Vestido",
+                        "Casaco",
+                        "Sapato",
+                        "Acessório",
+                        "Outro",
+                      ],
+                    },
+                    color: { type: "string" },
+                    brand: { type: "string" },
+                    bbox: {
+                      type: "array",
+                      items: { type: "number" },
+                    },
+                    existingId: { type: ["string", "null"] },
+                    confidence: { type: "number" },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
       const validated = detections.parse(JSON.parse(response.text || "{}"));
       res.json(normalizeMatches(validated, comparedIds));
     } catch (error) {
-      console.error("Vision failed:", error.name);
+      console.error(
+        "Vision failed:",
+        error.name,
+        error.issues?.map(({ path, code }) => ({ path, code })) || "",
+      );
       res.status(502).json({
         error:
           "Não foi possível analisar a imagem. Você pode cadastrar manualmente.",

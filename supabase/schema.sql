@@ -175,10 +175,17 @@ revoke execute on function reserve_vision(uuid),apply_billing_event(text,uuid,te
 grant execute on function reserve_vision(uuid),apply_billing_event(text,uuid,text,text,text) to service_role;
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values
- ('looks','looks',true,12582912,array['image/jpeg','image/png','image/webp']),
+ ('looks','looks',false,12582912,array['image/jpeg','image/png','image/webp']),
  ('wardrobe','wardrobe',false,12582912,array['image/jpeg','image/png','image/webp'])
 on conflict(id) do nothing;
 create policy lumina_upload on storage.objects for insert to authenticated with check(bucket_id in ('looks','wardrobe') and (storage.foldername(name))[1]=auth.uid()::text);
+create policy lumina_social_read on storage.objects for select to authenticated using(bucket_id='looks' and public.can_see_person(((storage.foldername(name))[1])::uuid));
 create policy lumina_private_read on storage.objects for select to authenticated using(bucket_id='wardrobe' and (storage.foldername(name))[1]=auth.uid()::text);
 create policy lumina_media_delete on storage.objects for delete to authenticated using(bucket_id in ('looks','wardrobe') and (storage.foldername(name))[1]=auth.uid()::text);
+-- Triggers cannot be called through the public Data API.
+revoke execute on function public.new_profile(), public.interaction_changed() from public, anon, authenticated;
+-- These helpers are used by RLS for signed-in users only.
+revoke execute on function public.can_see_person(uuid), public.can_see_post(uuid) from public, anon;
+grant execute on function public.can_see_person(uuid), public.can_see_post(uuid) to authenticated;
+
 commit;
